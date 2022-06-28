@@ -1,87 +1,95 @@
-use std::{
-    fmt::Display,
-    io::{self, Read},
-};
+mod rockpapsci;
 
-use rand::{distributions::Standard, prelude::Distribution};
+#[cfg(test)]
+mod tests;
 
-#[derive(Eq, Hash, PartialEq)]
-enum GameAction {
-    Invalid,
-    Rock,
-    Paper,
-    Scissor,
-}
-
-impl GameAction {
-    pub fn new(self, move_str: &str) -> GameAction {
-        match &move_str.trim().to_lowercase() as &str {
-            "rock" => GameAction::Rock,
-            "paper" => GameAction::Paper,
-            "scissor" => GameAction::Paper,
-            _ => GameAction::Invalid,
-        }
-    }
-
-    pub fn display_invalid_message() {
-        println!("That's an invalid command. Please enter 'rock', 'paper', or 'scissors' only!");
-    }
-}
-
-impl Distribution<GameAction> for Standard {
-    fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> GameAction {
-        match rng.gen_range(0..=2) {
-            0 => GameAction::Rock,
-            1 => GameAction::Paper,
-            2 => GameAction::Scissor,
-            _ => panic!("Something went wrong in randomizing the computer's move!"),
-        }
-    }
-}
-
-impl Display for GameAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self {
-            GameAction::Invalid => write!(f, "Invalid"),
-            GameAction::Rock => write!(f, "Rock"),
-            GameAction::Paper => write!(f, "Paper"),
-            GameAction::Scissor => write!(f, "Scissor"),
-        }
-    }
-}
-
-#[derive(Eq, Hash, PartialEq)]
-enum DoExitAction {
-    Invalid,
-    Continue,
-    Exit,
-}
-
-impl DoExitAction {
-    pub fn new(self, exit_str: &str) -> DoExitAction {
-        match &exit_str.trim().to_lowercase() as &str {
-            "y" | "yes" => DoExitAction::Exit,
-            "n" | "no" => DoExitAction::Continue,
-            _ => DoExitAction::Invalid,
-        }
-    }
-
-    pub fn display_invalid_message() {
-        println!("That's an invalid command. Please enter 'y' or 'n' only!");
-    }
-}
+use crate::rockpapsci::{exit_action::ExitAction, game_action::GameAction, outcome::Outcome};
+use std::io::{self, Write};
 
 fn main() {
-    let is_running: bool = true;
+    let mut is_running: bool = true;
+    let mut plyr_score: u32 = 0;
+    let mut comp_score: u32 = 0;
+
+    println!("Let's play Rock, Paper, Scissors!");
 
     while is_running {
-        // Initialize round
+        // Randomize computer's move
         let comp_mov: GameAction = rand::random();
 
-        println!("{:?}", comp_mov.to_string());
+        // Get player's move
+        let mut plyr_mov: Option<GameAction> = None;
 
-        // // Get player's command
-        // let mut cmd: String = String::new();
-        // io::stdin().read_to_string(&mut cmd);
+        while plyr_mov == None {
+            print!("Pick your move: ");
+            io::stdout()
+                .flush()
+                .expect("Error encountered when flushing");
+
+            let mut mov_str: String = String::new();
+            io::stdin()
+                .read_line(&mut mov_str)
+                .expect("Error encountered getting input");
+
+            plyr_mov = if let Ok(ga) = GameAction::new(&mov_str) {
+                Some(ga)
+            } else {
+                GameAction::display_invalid_msg();
+                None
+            };
+        }
+
+        // Compare moves
+        let results: Outcome = plyr_mov.expect("Player move is None!").beats(&comp_mov);
+
+        // Display results and score
+        match results {
+            Outcome::Lose => {
+                println!("Ha! I picked {}! You LOSE!", comp_mov.to_string());
+                comp_score += 1;
+            }
+            Outcome::Win => {
+                println!("Argh, I picked {}! You WON!", comp_mov.to_string());
+                plyr_score += 1;
+            }
+            Outcome::Tie => println!("We both picked {}. Let's try again!", comp_mov.to_string()),
+        }
+
+        println!("Score is {} - {}", plyr_score, comp_score);
+
+        if results != Outcome::Tie {
+            // Ask player if they want to play another round
+
+            let mut exit_act = None;
+
+            while exit_act == None {
+                let mut exit_str: String = String::new();
+
+                print!("Do you want to play again? (y/n): ");
+                io::stdout()
+                    .flush()
+                    .expect("Error encountered when flushing");
+
+                io::stdin()
+                    .read_line(&mut exit_str)
+                    .expect("Error encountered getting input");
+
+                exit_act = if let Ok(ea) = ExitAction::new(&exit_str) {
+                    Some(ea)
+                } else {
+                    ExitAction::display_invalid_msg();
+                    None
+                };
+            }
+
+            match exit_act.expect("Exit input is None!") {
+                ExitAction::Continue => is_running = true,
+                ExitAction::Exit => is_running = false,
+            }
+        }
+
+        println!("");
     }
+
+    println!("Bye! Thanks for playing with me! c:")
 }
