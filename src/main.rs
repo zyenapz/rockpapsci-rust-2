@@ -1,9 +1,9 @@
-mod rockpapsci;
+mod lib;
 
 #[cfg(test)]
 mod tests;
 
-use crate::rockpapsci::{exit_action::ExitAction, game_action::GameAction, outcome::Outcome};
+use crate::lib::{exit_action::ExitAction, game_action::GameAction, outcome::Outcome};
 use std::io::{self, Write};
 
 fn main() {

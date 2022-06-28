@@ -1,4 +1,4 @@
-use crate::rockpapsci::outcome::Outcome;
+use crate::lib::outcome::Outcome;
 use rand::{distributions::Standard, prelude::Distribution};
 use std::{fmt::Display, io};
 
